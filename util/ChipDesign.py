@@ -2,15 +2,7 @@ import sys, copy
 from qubit_templates import *
 from functions import *
 
-def resolve_from_string(path: str, scope=None):
-    if scope is None:
-        scope = locals()
 
-    obj_name, *attrs = path.split(".")
-    obj = scope[obj_name] 
-    for a in attrs:
-        obj = getattr(obj, a)
-    return obj
 
 def deep_set(config, path, value, sep=":"):
     keys = path.split(sep)
@@ -141,7 +133,6 @@ def chipdesign_wrapper(func):
             chipdesign.add_ref(FM)
             return chipdesign
 
-        # chipdesign, devicelist = func(config, chipdesign, devicelist)
         func(config, chipdesign, devicelist)
         chipdesign.add_ref(FM)
 
@@ -166,20 +157,8 @@ def chipdesign_Test(config, param_x, param_y, x, y):
 
     return chipdesign
 
-
-# def chipdesign_transmon2D(config, param_x = None, param_y = None, x = None, y = None, only_frame = False):
 @chipdesign_wrapper
 def chipdesign_transmon2D(config, chipdesign, devicelist):
-
-    # init_chipdesign(config, param_x, param_y, x, y)
-
-    # chipdesign = Device('chipdesign')
-
-    # FM = device_Frame(config)
-    
-    # if only_frame or ((param_x is not None and x is None) or (param_y is not None and y is None)):
-    #     chipdesign.add_ref(FM)
-    #     return chipdesign
 
     FL = device_FeedLine(config)
     chipdesign.add_ref(FL.device)
@@ -255,30 +234,16 @@ def chipdesign_transmon2D(config, chipdesign, devicelist):
 
         chipdesign.add_ref(EB[i])
 
-    # chipdesign.add_ref(FM)
-
-    devicelist = [
+    devicelist.extend( [
         dict(device = FL, name = "FeedLine"),
         dict(device = R[0], name = "Qubit1"),    
         dict(device = R[1], name = "Qubit2"),
         dict(device = R[2], name = "Qubit3"),    
         dict(device = R[3], name = "Qubit4")
-    ]
+    ] )
 
-    return chipdesign, devicelist
-
-# def chipdesign_transmon2D_Purcell(config, param_x = None, param_y = None, x = None, y = None, only_frame = False):
 @chipdesign_wrapper
 def chipdesign_transmon2D_Purcell(config, chipdesign, devicelist):
-    # init_chipdesign(config, param_x, param_y, x, y)
-
-    # chipdesign = Device('chipdesign')
-
-    # FM = device_Frame(config)
-    
-    # if only_frame or ((param_x is not None and x is None) or (param_y is not None and y is None)):
-    #     chipdesign.add_ref(FM)
-    #     return chipdesign
 
     FL = device_FeedLine_PurcellFilter(config)
     chipdesign.add_ref(FL.device)
@@ -309,28 +274,17 @@ def chipdesign_transmon2D_Purcell(config, chipdesign, devicelist):
 
     # chipdesign.add_ref(FM)
 
-    devicelist = [
+    devicelist.extend( [
         dict(device = FL, name = "FeedLine"),
         dict(device = R[0], name = "Qubit1"),    
         dict(device = R[1], name = "Qubit2"),
         dict(device = R[2], name = "Qubit3"),    
         dict(device = R[3], name = "Qubit4")
-    ]
+    ] )
 
-    #return chipdesign, devicelist
 
 @chipdesign_wrapper
 def chipdesign_transmon3D(config, chipdesign, devicelist):
-
-    # init_chipdesign(config, param_x, param_y, x, y)
-
-    # chipdesign = Device('chipdesign')
-
-    # FM = device_Frame(config)
-    
-    # if only_frame or ((param_x is not None and x is None) or (param_y is not None and y is None)):
-    #     chipdesign.add_ref(FM)
-    #     return chipdesign
 
     PAD=Device('PAD')
     rectangle = pg.rectangle(( config["Pad_width"], config["Pad_height"]), config["Pad_layer"])
@@ -381,25 +335,11 @@ def chipdesign_transmon3D(config, chipdesign, devicelist):
     TA = pg.union(TA, layer = config["TestPoint_layer"])     
     chipdesign.add_ref(TA)
 
-    # chipdesign.add_ref(FM)
     return chipdesign, devicelist
 
 
-# def chipdesign_TcSample(config, param_x = None, param_y = None, x = None, y = None, only_frame = False):
 @chipdesign_wrapper
 def chipdesign_TcSample(config, chipdesign, devicelist):
-
-    # init_chipdesign(config, param_x, param_y, x, y)
-
-    # chipdesign = Device('chipdesign')
-
-    # # Frame
-    # FM = device_Frame(config)
-    # # chipdesign.add_ref(FM)
-
-    # if only_frame or ((param_x is not None and x is None) or (param_y is not None and y is None)):
-    #     chipdesign.add_ref(FM)
-    #     return chipdesign
 
     # Feed line
     FL = device_FeedLine(config)
@@ -425,11 +365,8 @@ def chipdesign_TcSample(config, chipdesign, devicelist):
             sys.exit("Currently I don't know how to extract the right position to place the resonators...")
         chipdesign.add_ref(R[i].device)
 
-    devicelist = [
+    devicelist.extend( [
         dict(device = FL, name = "FeedLine"),
         dict(device = R[0], name = "Resonator1"),    
         dict(device = R[1], name = "Resonator2")
-    ]
-
-    # chipdesign.add_ref(FM)
-    return chipdesign, devicelist
+    ] )

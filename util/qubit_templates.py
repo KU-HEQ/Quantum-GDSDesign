@@ -15,6 +15,42 @@ from BaseDevice import *
 finger_layer = 1
 box_layer = 2
 
+def resolve_from_string(path: str, scope=None):
+
+    """Returns value from string
+    resolve_from_string( "PF[0]" )        -> PF[0]
+    resolve_from_string( "PF[0].device" ) -> PF[0].device
+    """
+
+    if scope is None:
+        scope = locals()
+
+    def resolve_token(obj, token: str, mode: str):
+        """トークンを解決（インデックス付きにも対応）"""
+        # "name[0]" や "name[1][2]" に対応
+        while "[" in token and token.endswith("]"):
+            name, idx = token[:-1].split("[", 1)
+            if name:   # 例: "PF[0]" → "PF" と "0"
+                obj = getattr(obj, name) if hasattr(obj, name) else obj[name]
+            obj = obj[int(idx)]
+            token = ""  # name 部分を消してループ抜け
+        if token:  # 残りが属性名なら getattr
+            if mode == "attribute":
+                obj = getattr(obj, token)
+            elif mode == "object":
+                obj = obj[token]
+        return obj
+
+    # トップレベルのオブジェクトを取得
+    first, *rest = path.split(".")
+    obj = resolve_token(scope, first, "object")
+
+    # 属性やさらにネストしたインデックスを辿る
+    for token in rest:
+        obj = resolve_token(obj, token, "attribute")
+
+    return obj
+
 def make_Path(config,
               resonator_straight1 = 240, 
               resonator_straight2 = 290, 
@@ -332,9 +368,8 @@ class device_FeedLine_PurcellFilter(BaseDevice):
 
             points = []
             for p in config["FeedLine_path_points"]:
-                if isinstance(p, str) and p.startswith("PurcellFilter:"):
-                    name, idx = p.split(":")
-                    points.append(int(idx))
+                if isinstance(p, str):
+                    points.append( resolve_from_string(p, locals()) )
                 else:
                     points.append(p)
 
@@ -346,7 +381,8 @@ class device_FeedLine_PurcellFilter(BaseDevice):
 
             # 1. LP_in → 最初の PF
             start_port = LP_in.device.ports['out']
-            end_port = PF[ points[pf_indices[0]] ].device.ports['in']
+            # end_port = PF[ points[pf_indices[0]] ].device.ports['in']
+            end_port = points[pf_indices[0]].device.ports['in']
             ports.append((start_port, end_port))
             segments.append([start_port.midpoint] + points[:pf_indices[0]] + [end_port.midpoint])
             
@@ -354,15 +390,18 @@ class device_FeedLine_PurcellFilter(BaseDevice):
             for i in range(len(pf_indices)-1):
                 start_index = pf_indices[i]
                 end_index = pf_indices[i+1]
-                start_port = PF[ points[start_index] ].device.ports['out']
-                end_port = PF[ points[end_index] ].device.ports['in']
+                # start_port = PF[ points[start_index] ].device.ports['out']
+                # end_port = PF[ points[end_index] ].device.ports['in']
+                start_port = points[start_index].device.ports['out']
+                end_port = points[end_index].device.ports['in']
                 start_point = start_port.midpoint
                 end_point = end_port.midpoint
                 segments.append([start_point] + points[start_index+1:end_index] + [end_point])
                 ports.append((start_port, end_port))
 
             # 3. 最後の PF → LP_out
-            start_port = PF[ points[pf_indices[-1]] ].device.ports['out']
+            # start_port = PF[ points[pf_indices[-1]] ].device.ports['out']
+            start_port = points[pf_indices[-1]].device.ports['out']
             end_port = LP_out.device.ports['out']
             segments.append([start_port.midpoint] + points[pf_indices[-1]+1:] + [end_port.midpoint] )
             ports.append((start_port, end_port))
