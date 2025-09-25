@@ -199,28 +199,210 @@ class device_Pad(BaseDevice):
 
         self.device.add_ref( boolean_with_ports(self.pocket, self.metal, "not", layer = config["Pad_layer"]) )
 
-# class device_FeedLine(BaseDevice):
-#     def __init__(self):
-#         # make 2 pads
-#         super().__init__("feedline")    
+class device_PurcellFilter(BaseDevice):
+    def __init__(self, 
+                 config,
+                 pad_gap,
+                 trace_length,
+                 n_step,
+                 finger_width,
+                 finger_length,
+                 cap_gap,
+                 **kwargs
+                 ):
+        super().__init__("purcellfilter")    
 
-#         LP_in = device_LaunchPad()
-#         LP_in.move((750, 2025))
-#         LP_out = device_LaunchPad()
-#         LP_out.rotate(90).move((1950, 800))
-#         self.add_ref(LP_in)
-#         self.add_ref(LP_out)
-
-#         D4 = pr.route_smooth(LP_in.pocket.ports['out'], LP_out.pocket.ports['out'], radius=100, path_type='J', length1=790, length2=768, smooth_options={'corner_fun': pp.arc}, layer = LaunchPad_layer)
-
-#         X = CrossSection()
-#         X.add(width=LaunchPad_trace_gap_width, offset = 0.5*(LaunchPad_trace_width + LaunchPad_trace_gap_width), layer = LaunchPad_layer)
-#         X.add(width=LaunchPad_trace_gap_width, offset = -0.5*(LaunchPad_trace_width + LaunchPad_trace_gap_width), layer = LaunchPad_layer)
-#         D3 = pr.route_smooth(LP_in.device.ports['out'], LP_out.device.ports['out'], width = X, radius=100, path_type='J', length1=790, length2=768, smooth_options={'corner_fun': pp.arc})
         
-#         self.device.add_ref(D3)
-#         self.pocket.add_ref(D4)
-#         self.metal.add_ref( boolean_with_ports(self.pocket, self.device, "not", layer = LaunchPad_layer) )
+        components = {}
+        # Make middle area (pad)
+        pad_length = finger_length + cap_gap
+        pad_width = n_step * finger_width + (n_step - 1) * cap_gap
+        pad_gap_width =  pad_width + 2 * pad_gap
+        components["pad_pocket"] = pg.rectangle(size = (pad_length, pad_gap_width))
+        components["pad_pocket"].add_port(name = 'connect_in', midpoint = [0., 0.5*pad_gap_width], width = pad_gap_width, orientation = 180)
+        components["pad_pocket"].add_port(name = 'connect_out', midpoint = [pad_length, 0.5*pad_gap_width], width = pad_gap_width, orientation = 0)
+        components["pad_device"] = pg.copy(components["pad_pocket"])
+        for i in range(n_step):
+            finger = pg.rectangle(size = (finger_length, finger_width))
+            finger.movey(i*(finger_width + cap_gap) + pad_gap)
+            if i % 2 == 0:
+                finger.movex(cap_gap)
+            components["pad_device"] = boolean_with_ports(components["pad_device"], finger, "not", layer = config["PurcellFilter_layer"])
+
+        components["trace"]    = pg.taper(length = trace_length, width1 = pad_width, width2 = config["LaunchPad_trace_width"], port = None, layer = 0)
+        rename_port( components["trace"], 1, "connect")
+        components["tracegap"] = pg.taper(length = trace_length, width1 = pad_gap_width, width2 = config["LaunchPad_trace_width"] + 2*config["LaunchPad_trace_gap_width"], port = None, layer = config["PurcellFilter_layer"])
+        components["trace_device_in"] = boolean_with_ports(components["tracegap"], components["trace"], "not", layer = config["PurcellFilter_layer"])
+        components["trace_pocket"] = boolean_with_ports(components["tracegap"], components["trace"], "or", layer = config["PurcellFilter_layer"])        
+
+        components["trace_device_out"] = pg.copy( components["trace_device_in"] )
+
+        components["trace_device_in"] = self.device.add_ref( components["trace_device_in"] )
+        components["trace_device_out"] = self.device.add_ref( components["trace_device_out"] )
+        components["pad_device"] = self.device.add_ref( components["pad_device"] )
+        components["trace_pocket_in"] = self.pocket.add_ref( components["trace_pocket"] )
+        components["trace_pocket_out"] = self.pocket.add_ref( components["trace_pocket"] )
+        components["pad_pocket"] = self.pocket.add_ref( components["pad_pocket"] )        
+
+        components["trace_device_in"].connect(port = 'connect', destination = components["pad_device"].ports['connect_in'])
+        components["trace_pocket_in"].connect(port = 'connect', destination = components["pad_pocket"].ports['connect_in'])        
+        components["trace_device_out"].connect(port = 'connect', destination = components["pad_device"].ports['connect_out'])
+        components["trace_pocket_out"].connect(port = 'connect', destination = components["pad_pocket"].ports['connect_out'])   
+
+        self.device.add_port(name = 'in', midpoint = [-trace_length, 0.5*pad_gap_width], width = config["LaunchPad_trace_width"] + 2*config["LaunchPad_trace_gap_width"], orientation = 180)
+        self.device.add_port(name = 'out', midpoint = [pad_length + trace_length, 0.5*pad_gap_width], width = config["LaunchPad_trace_width"] + 2*config["LaunchPad_trace_gap_width"], orientation = 0)
+        self.pocket.add_port(name = 'in', midpoint = [-trace_length, 0.5*pad_gap_width], width = config["LaunchPad_trace_width"] + 2*config["LaunchPad_trace_gap_width"], orientation = 180)
+        self.pocket.add_port(name = 'out', midpoint = [pad_length + trace_length, 0.5*pad_gap_width], width = config["LaunchPad_trace_width"] + 2*config["LaunchPad_trace_gap_width"], orientation = 0)
+        self.center = (0, 0)
+        # self.xmin = 0
+
+        self.metal.add_ref( boolean_with_ports(self.pocket, self.device, "not", layer = config["PurcellFilter_layer"]) )
+
+class device_FeedLine_PurcellFilter(BaseDevice):
+    def __init__(self, config):
+        # make 2 pads
+        super().__init__("feedline")
+
+        LP_in = globals()[f"device_{config['FeedLine_input_type']}"](config)
+        LP_in.rotate(config["FeedLine_input_angle"]).move(config["FeedLine_input_pos"])
+
+        X_device = CrossSection()
+        X_device.add(
+            width=config["LaunchPad_trace_gap_width"], 
+            offset = 0.5*(config["LaunchPad_trace_width"] + config["LaunchPad_trace_gap_width"]), 
+            layer = config["LaunchPad_layer"]
+        )
+        X_device.add(
+            width=config["LaunchPad_trace_gap_width"], 
+            offset = -0.5*(config["LaunchPad_trace_width"] + config["LaunchPad_trace_gap_width"]), 
+            layer = config["LaunchPad_layer"]
+        )
+
+        X_pocket = CrossSection()
+        X_pocket.add(
+            width=config["LaunchPad_trace_width"] + 2*config["LaunchPad_trace_gap_width"], 
+            layer = config["LaunchPad_layer"], 
+            ports = ('in','out')
+        )
+
+        device_ref, metal_ref, pocket_ref = self.add_ref(LP_in)
+
+        LP_out = globals()[f"device_{config['FeedLine_output_type']}"](config)
+        LP_out.rotate(config["FeedLine_output_angle"]).move(config["FeedLine_output_pos"])
+
+        PF = []
+        for i, purcellfilter_config in enumerate(config["PurcellFilter_devices"]):
+            PF.append( device_PurcellFilter( config, **purcellfilter_config ) )
+            PF[i].rotate(purcellfilter_config["angle"]).move(purcellfilter_config["pos"])
+            self.add_ref(PF[i])
+
+        if config["FeedLine_path_type"] == "extrude":
+            P = Path()
+            for pathtype, length in config["FeedLine_path_points"]:
+                if pathtype == "left":
+                    path = pp.arc(radius = length, angle = 90)
+                elif pathtype == "right":
+                    path = pp.arc(radius = length, angle = -90)
+                elif pathtype == "straight":
+                    path = pp.straight(length = length)
+                P.append(path)
+
+            FeedLine_device = P.extrude(X_device)
+            FeedLine_pocket = P.extrude(X_pocket)
+            #FeedLine_pocket = P.extrude(LaunchPad_trace_width + 2*LaunchPad_trace_gap_width, layer = LaunchPad_layer)
+
+            ## Get port information
+            for port in FeedLine_pocket.get_ports():
+                FeedLine_device.add_port(port)
+            # FeedLine_device.add_port(name = 'out1', midpoint = [0., 0.], width = LaunchPad_trace_width, orientation = 180)
+            # FeedLine_pocket.add_port(name = 'out1', midpoint = [0., 0.], width = LaunchPad_trace_width, orientation = 180)
+
+            FeedLine_device = self.device.add_ref( FeedLine_device )
+            FeedLine_device.connect(port = 'in', destination = device_ref.ports['out'])
+            
+            FeedLine_pocket = self.pocket.add_ref( FeedLine_pocket )
+            FeedLine_pocket.connect(port = 'in', destination = pocket_ref.ports['out'])
+
+            device_ref, metal_ref, pocket_ref = self.add_ref(LP_out)
+
+            device_ref.connect(port = "out", destination = FeedLine_device.ports['out'])
+            pocket_ref.connect(port = "out", destination = FeedLine_pocket.ports['out'])   
+        
+        elif config["FeedLine_path_type"] == "manual":
+
+            points = []
+            for p in config["FeedLine_path_points"]:
+                if isinstance(p, str) and p.startswith("PurcellFilter:"):
+                    name, idx = p.split(":")
+                    points.append(int(idx))
+                else:
+                    points.append(p)
+
+            # PurcellFilter の位置を特定
+            pf_indices = [i for i, p in enumerate(points) if not isinstance(p, list)]
+
+            segments = []
+            ports = []
+
+            # 1. LP_in → 最初の PF
+            start_port = LP_in.device.ports['out']
+            end_port = PF[ points[pf_indices[0]] ].device.ports['in']
+            ports.append((start_port, end_port))
+            segments.append([start_port.midpoint] + points[:pf_indices[0]] + [end_port.midpoint])
+            
+            # 2. PF[i] → … → PF[i+1]
+            for i in range(len(pf_indices)-1):
+                start_index = pf_indices[i]
+                end_index = pf_indices[i+1]
+                start_port = PF[ points[start_index] ].device.ports['out']
+                end_port = PF[ points[end_index] ].device.ports['in']
+                start_point = start_port.midpoint
+                end_point = end_port.midpoint
+                segments.append([start_point] + points[start_index+1:end_index] + [end_point])
+                ports.append((start_port, end_port))
+
+            # 3. 最後の PF → LP_out
+            start_port = PF[ points[pf_indices[-1]] ].device.ports['out']
+            end_port = LP_out.device.ports['out']
+            segments.append([start_port.midpoint] + points[pf_indices[-1]+1:] + [end_port.midpoint] )
+            ports.append((start_port, end_port))
+
+            for ipath, manual_path in enumerate(segments):
+                common_args = dict(
+                    port1          = ports[ipath][0],
+                    port2          = ports[ipath][1],
+                    path_type      = "manual",
+                    manual_path    = manual_path,
+                    radius         = config["FeedLine_path_radius"],
+                    smooth_options = {"corner_fun": pp.arc},
+                )
+                D3 = pr.route_smooth(**common_args, width=X_device)
+                D4 = pr.route_smooth(**common_args, layer=config["LaunchPad_layer"])
+                    
+                self.device.add_ref(D3)
+                self.pocket.add_ref(D4)
+
+
+            self.add_ref(LP_out)
+
+        else:
+            common_args = dict(
+                port1          = LP_in.device.ports['out'],
+                port2          = LP_out.device.ports['out'],
+                path_type = config["FeedLine_path_type"], 
+                length1 = config["FeedLine_path_length1"],
+                length2 = config["FeedLine_path_length2"],
+                radius = config["FeedLine_path_radius"],
+                smooth_options={'corner_fun': pp.arc}
+            )
+            D3 = pr.route_smooth(**common_args, width = X_device)
+            D4 = pr.route_smooth(**common_args)
+
+            self.device.add_ref(D3)
+            self.pocket.add_ref(D4)
+            self.add_ref(LP_out)
+
+        self.metal.add_ref( boolean_with_ports(self.pocket, self.device, "not", layer = config["LaunchPad_layer"]) )
 
 class device_FeedLine(BaseDevice):
     def __init__(self, config):
@@ -472,6 +654,7 @@ class device_Resonator(BaseDevice):
                  norm_to_frequency = None,
                  transmon = True, 
                  side = False, 
+                 flip = False,
                  mirror = False, 
                  entangle = False, 
                  print_length = False, 
@@ -582,7 +765,15 @@ class device_Resonator(BaseDevice):
             pad_pocket.connect(port = 'out', destination = pocket.ports['out'])            
 
             if mirror: # flip at pad center
-                self.mirror(p1 = (-10, pad_device.center[1]), p2 = (10, pad_device.center[1]) )
+                if side:
+                    self.mirror(p1 = (-10, pad_device.center[1]), p2 = (10, pad_device.center[1]) )
+                else:
+                    self.mirror(p1 = (pad_device.center[0], -10), p2 = (pad_device.center[0], 10) )
+            if flip: # flip at pad center
+                if not side:
+                    self.mirror(p1 = (-10, pad_device.center[1]), p2 = (10, pad_device.center[1]) )
+                else:
+                    self.mirror(p1 = (pad_device.center[0], -10), p2 = (pad_device.center[0], 10) )
         
         else:
             #waveguide_device = Resonator.add_ref(waveguide_device)
@@ -597,7 +788,15 @@ class device_Resonator(BaseDevice):
             short_ground_pocket.connect(port="out", destination=pocket.ports['out'])             
 
             if mirror: # flip at waveguide center
-                self.mirror(p1 = (-10, self.device.center[1]), p2 = (10, self.device.center[1]) )
+                if side:
+                    self.mirror(p1 = (-10, self.device.center[1]), p2 = (10, self.device.center[1]) )
+                else:
+                    self.mirror(p1 = (self.device.center[0], -10), p2 = (self.device.center[0], 10) )
+            if flip: # flip at waveguide center
+                if not side:
+                    self.mirror(p1 = (-10, self.device.center[1]), p2 = (10, self.device.center[1]) )
+                else:
+                    self.mirror(p1 = (self.device.center[0], -10), p2 = (self.device.center[0], 10) )
 
         if print_length:
             print(f"Length : {P.length()} [um]")

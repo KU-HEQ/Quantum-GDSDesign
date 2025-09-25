@@ -1,7 +1,6 @@
-import yaml
+import yaml, pprint, math
 from scipy.special import ellipk
 from scipy.constants import *
-import math
 import numpy as np
 
 from phidl import quickplot as qp
@@ -55,6 +54,25 @@ def flatten_dict(d, parent_key="", sep="_"):
         else:
             items[new_key] = v
     return items
+
+# def flatten_dict(d, parent_key="", sep="_"):
+#     items = []
+#     for k, v in d.items():
+#         new_key = f"{parent_key}{sep}{k}" if parent_key else k
+#         if isinstance(v, dict):
+#             items.extend(flatten_dict(v, new_key, sep=sep).items())
+#         elif isinstance(v, list):
+#             # list の中身が dict なら flatten
+#             new_list = []
+#             for elem in v:
+#                 if isinstance(elem, dict):
+#                     new_list.append(flatten_dict(elem, sep=sep))
+#                 else:
+#                     new_list.append(elem)
+#             items.append((new_key, new_list))
+#         else:
+#             items.append((new_key, v))
+#     return dict(items)
 
 def phidl_to_metal(device_list, outname):
 
@@ -110,9 +128,15 @@ def phidl_to_metal(device_list, outname):
         if jj_data:
             data[key]["jj"] = jj_data            
 
-    print(data)
+    pprint.pprint(data)
     with open(f'output/qiskit-metal/{outname}.yaml', 'w') as f:
         yaml.safe_dump(data, f, sort_keys=False)
+
+def rename_port(device, before, after):
+
+    device.ports[after] = device.ports[before]
+    device.ports[after].name = after
+    del device.ports[before]
 
 def extract_with_ports(device, layers_to_extract):
 

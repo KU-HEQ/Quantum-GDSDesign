@@ -1,0 +1,193 @@
+Wafer:
+  layer: 21
+  inch: 4
+
+LaunchPad:
+  layer: 4
+  pad:
+    length: 300
+    width: 200
+    gap:
+      length: 400
+      width: 500
+  trace:
+    length: 200
+    width: 20
+    gap:
+      width: 11
+
+PurcellFilter:
+  layer: 4
+  devices:
+    - pos: [-1800, -2200]
+      angle: 0
+      pad_gap: 22
+      trace_length: 100
+      n_step: 3
+      finger_width: 11
+      finger_length: 100
+      cap_gap: 4
+    - pos: [2150, 1550]
+      angle: 90
+      pad_gap: 56
+      trace_length: 100
+      n_step: 7
+      finger_width: 11
+      finger_length: 500
+      cap_gap: 4
+
+FeedLine:
+  input:
+    type: "LaunchPad"
+    pos: [-2050, -1540]
+    angle: 90
+  output:
+    type: "LaunchPad"
+    pos: [1520, 2050] 
+    angle: 180
+
+  ## If you just want to connect the input and output port,
+  ## this is the easiest way.
+  ## options are listed in https://phidl.readthedocs.io/en/latest/tutorials/routing.html#List-of-routing-path-types
+
+  path:
+    type: "manual"
+    radius: 90
+    points:
+      - [-2050, -2200]
+      - "PurcellFilter:0"
+      - [-1500, -2200]
+      - [-1500, 0]
+      - [2150, 0]  
+      - "PurcellFilter:1"
+      - [2150, 2050]
+
+Frame:
+  layer: 25
+  width: 50
+  size:
+    height: 5000
+    width: 5000
+
+DCLine: 
+  activate: true # Add DC line next to squids
+  radius: 100
+
+CornerPoint:
+  layer: 4
+  width: 10
+  gap:
+    width: 20
+  pos:
+    - [ 2150, 2150]
+    - [-2150, 2150]
+    - [-2150,-2150]
+    - [ 2150,-2150]
+
+Resonator:
+  layer: 4
+  width: 10
+  radius: 75
+  pad:
+    width: 700
+    length: 700
+  gap:
+    width: 6
+  devices:
+    - resonator_straight1: 220
+      resonator_straight2: 260
+      resonator_straight3: 475
+      resonator_straight4: 1400
+      feedline_gap: 13
+      movex: 1315
+      mirror: true
+      ymax: -21
+    - resonator_straight1: 240
+      resonator_straight2: 290
+      resonator_straight3: 475
+      resonator_straight4: 1400
+      feedline_gap: 13
+      movex: 145
+      mirror: true
+      ymax: -21
+    - resonator_straight1: 310
+      resonator_straight2: 360
+      resonator_straight3: 475
+      resonator_straight4: 1030
+      feedline_gap: 13
+      flip: true
+      mirror: false
+      movex: -800
+      ymin: 21
+    - resonator_straight1: 275
+      resonator_straight2: 325
+      resonator_straight3: 475
+      resonator_straight4: 1030
+      feedline_gap: 13
+      flip: true
+      mirror: false
+      movex: 400
+      ymin: 21
+
+TestPoint:
+  layer: 4
+  box:
+    width: 279
+    length: 135
+    gap:
+      width: 27
+  stub:
+    width: 18
+    length: 68.4
+    gap:
+      width: 18
+      length: 14.4  
+
+# EB line for testing shadow evaporation
+EBLine:
+    box:
+      layer: 2
+      width: 2.7
+      overlay: 0.27
+    finger:
+      layer: 1
+      inner: 
+        width: 0.473
+        length: 16.2    
+      outer:
+        width: 0.608
+        length: 10.8
+    devices:          # Without DC Line
+      - movex: -843   # -1093
+        movey: -1689  # -1739
+      - movex: -843   # -1093
+        movey: -1038  # -1088
+
+
+EBMarker:
+  layer: 3
+  pos: 
+    - [     0,      0]
+    - [     0,  38400]
+    - [-19200, -28800]
+    - [ 38400,      0]
+    - [     0, -38400]
+    - [-19200, -38400]
+    - [-38400,      0]
+
+Grid:
+  name: "transmon2D_Purcell"
+  layer: 9
+  lines:
+    x: 20
+    y: 20
+  sweep:
+    ## If you have many parameters to sweep, use gridsweep to make a 2D array
+    type: "gridsweep"
+    array:
+      - param_x: "JJ_finger_width"
+        param_y: "JJ_devices:0:JJ_squid"
+        x: [0.105, 0.115, 0.125, 0.135, 0.145, 0.155, 0.165]
+        y: [false, true, false, true, false, true, false, true]
+        gap_x: 1
+        gap_y: 1

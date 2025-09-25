@@ -61,19 +61,16 @@ def init_chipdesign(config, param_x, param_y, x, y):
 
 def sweep_chipdesign( config, userfunction = None ):
 
-    def _sweep_chipdesign( config, userfunction = None, first_call = True, param_x = None, param_y = None, x = None, y = None, n_level = None ):
+    def _sweep_chipdesign( config, userfunction = None, sweep = True, first_call = True, param_x = None, param_y = None, x = None, y = None, n_level = None ):
 
         if config["Grid_sweep_type"] == "array":
             devices = []
             for device in config["Grid_sweep_devices"]:
-                updated_config = copy.copy(config)
+                updated_config = copy.deepcopy(config) # This must be deepcopy !! (Otherwise original config will be overwrited...)
                 for key in device:
-                    if key in updated_config:
-                        updated_config[key] = device[key]
-                    else:
-                        raise ValueError(f"{key} is not defined in original config !!")
-                devices.append( globals()["chipdesign_" + config["Grid_name"]](updated_config) )
-            devices.append( globals()["chipdesign_" + config["Grid_name"]](updated_config, only_frame = True) )
+                    init_chipdesign(updated_config, key, None, device[key], None)
+                devices.append( globals()["chipdesign_" + config["Grid_name"]](updated_config, sweep = sweep) )
+            devices.append( globals()["chipdesign_" + config["Grid_name"]](updated_config, sweep = sweep, only_frame = True) )
             device_list = []
             for row in config["Grid_sweep_array"]:
                 for cell in row:
@@ -109,6 +106,7 @@ def sweep_chipdesign( config, userfunction = None ):
                 }
             param_defaults = {
                 **param_defaults, 
+                'sweep' : True,
                 'param_x' : array["param_x"],
                 'param_y' : array["param_y"],   
                 'config' : config,
@@ -133,6 +131,26 @@ def sweep_chipdesign( config, userfunction = None ):
     
     return _sweep_chipdesign( config, userfunction )
 
+def chipdesign_wrapper(func):
+    def wrapper(config, sweep=False, param_x=None, param_y=None, x=None, y=None, only_frame=False):
+        init_chipdesign(config, param_x, param_y, x, y)
+        chipdesign = Device('chipdesign')
+        devicelist = []
+        FM = device_Frame(config)
+        if only_frame or ((param_x is not None and x is None) or (param_y is not None and y is None)):
+            chipdesign.add_ref(FM)
+            return chipdesign
+
+        # chipdesign, devicelist = func(config, chipdesign, devicelist)
+        func(config, chipdesign, devicelist)
+        chipdesign.add_ref(FM)
+
+        if sweep:
+            return chipdesign
+        else:
+            return chipdesign, devicelist
+    return wrapper
+
 def chipdesign_Test(config, param_x, param_y, x, y):
 
     init_chipdesign(config, param_x, param_y, x, y)
@@ -149,17 +167,19 @@ def chipdesign_Test(config, param_x, param_y, x, y):
     return chipdesign
 
 
-def chipdesign_transmon2D(config, param_x = None, param_y = None, x = None, y = None, only_frame = False):
+# def chipdesign_transmon2D(config, param_x = None, param_y = None, x = None, y = None, only_frame = False):
+@chipdesign_wrapper
+def chipdesign_transmon2D(config, chipdesign, devicelist):
 
-    init_chipdesign(config, param_x, param_y, x, y)
+    # init_chipdesign(config, param_x, param_y, x, y)
 
-    chipdesign = Device('chipdesign')
+    # chipdesign = Device('chipdesign')
 
-    FM = device_Frame(config)
+    # FM = device_Frame(config)
     
-    if only_frame or ((param_x is not None and x is None) or (param_y is not None and y is None)):
-        chipdesign.add_ref(FM)
-        return chipdesign
+    # if only_frame or ((param_x is not None and x is None) or (param_y is not None and y is None)):
+    #     chipdesign.add_ref(FM)
+    #     return chipdesign
 
     FL = device_FeedLine(config)
     chipdesign.add_ref(FL.device)
@@ -209,7 +229,6 @@ def chipdesign_transmon2D(config, param_x = None, param_y = None, x = None, y = 
         chipdesign = pg.boolean(chipdesign, DC.metal, 'not', layer = 4)
         chipdesign.add_ref(DC.device)
 
-    chipdesign.add_ref(FM)
 
     BX = device_TestBoxes(DCLine = config["DCLine_activate"])
     chipdesign.add_ref(BX)
@@ -236,19 +255,82 @@ def chipdesign_transmon2D(config, param_x = None, param_y = None, x = None, y = 
 
         chipdesign.add_ref(EB[i])
 
-    return chipdesign
+    # chipdesign.add_ref(FM)
 
-def chipdesign_transmon3D(config, param_x = None, param_y = None, x = None, y = None, only_frame = False):
+    devicelist = [
+        dict(device = FL, name = "FeedLine"),
+        dict(device = R[0], name = "Qubit1"),    
+        dict(device = R[1], name = "Qubit2"),
+        dict(device = R[2], name = "Qubit3"),    
+        dict(device = R[3], name = "Qubit4")
+    ]
 
-    init_chipdesign(config, param_x, param_y, x, y)
+    return chipdesign, devicelist
 
-    chipdesign = Device('chipdesign')
+# def chipdesign_transmon2D_Purcell(config, param_x = None, param_y = None, x = None, y = None, only_frame = False):
+@chipdesign_wrapper
+def chipdesign_transmon2D_Purcell(config, chipdesign, devicelist):
+    # init_chipdesign(config, param_x, param_y, x, y)
 
-    FM = device_Frame(config)
+    # chipdesign = Device('chipdesign')
+
+    # FM = device_Frame(config)
     
-    if only_frame or ((param_x is not None and x is None) or (param_y is not None and y is None)):
-        chipdesign.add_ref(FM)
-        return chipdesign
+    # if only_frame or ((param_x is not None and x is None) or (param_y is not None and y is None)):
+    #     chipdesign.add_ref(FM)
+    #     return chipdesign
+
+    FL = device_FeedLine_PurcellFilter(config)
+    chipdesign.add_ref(FL.device)
+
+    R = []
+    for i, resonator_config in enumerate(config["Resonator_devices"]):
+
+        # Set entangle flag
+        if config.get("JJ_entangle") and any(i in entangle_config["pairs"] for entangle_config in config["JJ_entangle"]):
+            resonator_config.update( entangle = True )
+
+        R.append( device_Resonator(config, **resonator_config) )
+        if "movex" in resonator_config:
+            R[i].movex( resonator_config["movex"] )
+        if "movey" in resonator_config:
+            R[i].movey( resonator_config["movey"] )
+        if "xmax" in resonator_config:
+            xmax_ref = resolve_from_string(path = resonator_config["xmax"], scope=locals()) if type(resonator_config["xmax"]) == str else resonator_config["xmax"]
+            R[i].xmax = xmax_ref - resonator_config["feedline_gap"]
+        if "ymax" in resonator_config:
+            ymax_ref = resolve_from_string(path = resonator_config["ymax"], scope=locals()) if type(resonator_config["ymax"]) == str else resonator_config["ymax"]
+            R[i].ymax = ymax_ref - resonator_config["feedline_gap"]
+        if "ymin" in resonator_config:
+            ymin_ref = resolve_from_string(path = resonator_config["ymin"], scope=locals()) if type(resonator_config["ymin"]) == str else resonator_config["ymin"]
+            R[i].ymin = ymin_ref + resonator_config["feedline_gap"]
+
+        chipdesign.add_ref(R[i].device)
+
+    # chipdesign.add_ref(FM)
+
+    devicelist = [
+        dict(device = FL, name = "FeedLine"),
+        dict(device = R[0], name = "Qubit1"),    
+        dict(device = R[1], name = "Qubit2"),
+        dict(device = R[2], name = "Qubit3"),    
+        dict(device = R[3], name = "Qubit4")
+    ]
+
+    #return chipdesign, devicelist
+
+@chipdesign_wrapper
+def chipdesign_transmon3D(config, chipdesign, devicelist):
+
+    # init_chipdesign(config, param_x, param_y, x, y)
+
+    # chipdesign = Device('chipdesign')
+
+    # FM = device_Frame(config)
+    
+    # if only_frame or ((param_x is not None and x is None) or (param_y is not None and y is None)):
+    #     chipdesign.add_ref(FM)
+    #     return chipdesign
 
     PAD=Device('PAD')
     rectangle = pg.rectangle(( config["Pad_width"], config["Pad_height"]), config["Pad_layer"])
@@ -299,22 +381,25 @@ def chipdesign_transmon3D(config, param_x = None, param_y = None, x = None, y = 
     TA = pg.union(TA, layer = config["TestPoint_layer"])     
     chipdesign.add_ref(TA)
 
-    chipdesign.add_ref(FM)
-    return chipdesign
+    # chipdesign.add_ref(FM)
+    return chipdesign, devicelist
 
 
-def chipdesign_TcSample(config, param_x = None, param_y = None, x = None, y = None, only_frame = False):
+# def chipdesign_TcSample(config, param_x = None, param_y = None, x = None, y = None, only_frame = False):
+@chipdesign_wrapper
+def chipdesign_TcSample(config, chipdesign, devicelist):
 
-    init_chipdesign(config, param_x, param_y, x, y)
+    # init_chipdesign(config, param_x, param_y, x, y)
 
-    chipdesign = Device('chipdesign')
+    # chipdesign = Device('chipdesign')
 
-    # Frame
-    FM = device_Frame(config)
-    chipdesign.add_ref(FM)
+    # # Frame
+    # FM = device_Frame(config)
+    # # chipdesign.add_ref(FM)
 
-    if only_frame or ((param_x is not None and x is None) or (param_y is not None and y is None)):
-        return chipdesign
+    # if only_frame or ((param_x is not None and x is None) or (param_y is not None and y is None)):
+    #     chipdesign.add_ref(FM)
+    #     return chipdesign
 
     # Feed line
     FL = device_FeedLine(config)
@@ -340,4 +425,11 @@ def chipdesign_TcSample(config, param_x = None, param_y = None, x = None, y = No
             sys.exit("Currently I don't know how to extract the right position to place the resonators...")
         chipdesign.add_ref(R[i].device)
 
-    return chipdesign
+    devicelist = [
+        dict(device = FL, name = "FeedLine"),
+        dict(device = R[0], name = "Resonator1"),    
+        dict(device = R[1], name = "Resonator2")
+    ]
+
+    # chipdesign.add_ref(FM)
+    return chipdesign, devicelist
