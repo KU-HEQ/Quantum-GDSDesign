@@ -1,5 +1,6 @@
 import numpy as np
 import math, pprint
+import ast
 import matplotlib.pyplot as plt
 from scipy import constants as const
 from phidl import quickplot as qp
@@ -32,7 +33,7 @@ def resolve_from_string(path: str, scope=None):
             name, idx = token[:-1].split("[", 1)
             if name:   # 例: "PF[0]" → "PF" と "0"
                 obj = getattr(obj, name) if hasattr(obj, name) else obj[name]
-            obj = obj[int(idx)]
+            obj = obj[ast.literal_eval(idx)]
             token = ""  # name 部分を消してループ抜け
         if token:  # 残りが属性名なら getattr
             if mode == "attribute":

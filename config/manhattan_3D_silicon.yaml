@@ -54,7 +54,7 @@ Grid:
     y: 10
   sweep:
     ## If you have many parameters to sweep, use gridsweep to make a 2D array
-    # type: "gridsweep"
+    type: "gridsweep"
     array:
       - param_x: "JJ_finger_width"
         param_y: "dummy"
@@ -103,7 +103,7 @@ Grid:
 
 
 Text:
-  string: 'str(width)'
+  string: config["JJ_finger_width"]
   layer: 1 #2
   size: 40
   pos:

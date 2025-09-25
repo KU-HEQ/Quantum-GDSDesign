@@ -133,7 +133,7 @@ def chipdesign_wrapper(func):
             chipdesign.add_ref(FM)
             return chipdesign
 
-        func(config, chipdesign, devicelist)
+        chipdesign, devicelist = func(config, chipdesign, devicelist)
         chipdesign.add_ref(FM)
 
         if sweep:
@@ -242,6 +242,8 @@ def chipdesign_transmon2D(config, chipdesign, devicelist):
         dict(device = R[3], name = "Qubit4")
     ] )
 
+    return chipdesign, devicelist
+
 @chipdesign_wrapper
 def chipdesign_transmon2D_Purcell(config, chipdesign, devicelist):
 
@@ -282,6 +284,7 @@ def chipdesign_transmon2D_Purcell(config, chipdesign, devicelist):
         dict(device = R[3], name = "Qubit4")
     ] )
 
+    return chipdesign, devicelist
 
 @chipdesign_wrapper
 def chipdesign_transmon3D(config, chipdesign, devicelist):
@@ -307,7 +310,8 @@ def chipdesign_transmon3D(config, chipdesign, devicelist):
         pol.fillet( config["Pad_JJ_rounding"] )
     chipdesign = pg.union( chipdesign, layer = config["Pad_layer"] )
 
-    text = eval(config["Text_string"], {"width": x, "height": y})
+    # text = eval(config["Text_string"], {"width": x, "height": y})
+    text = str(resolve_from_string(config["Text_string"], locals()))
     move_x = config["Text_pos_x"]*0.5*config["Frame_size_width"]
     move_y = config["Text_pos_y"]*0.5*config["Frame_size_height"]    
 
@@ -370,3 +374,5 @@ def chipdesign_TcSample(config, chipdesign, devicelist):
         dict(device = R[0], name = "Resonator1"),    
         dict(device = R[1], name = "Resonator2")
     ] )
+
+    return chipdesign, devicelist

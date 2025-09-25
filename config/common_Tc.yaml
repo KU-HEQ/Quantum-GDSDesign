@@ -176,41 +176,41 @@ Grid:
   sweep:
     ## If you have many parameters to sweep, use gridsweep to make a 2D array
     ## The example below has different resonator length for each row
-    # type: "gridsweep"
-    # array:
-    #   - param_x: ["Resonator_devices:0:n_step", "Resonator_devices:1:n_step"]
-    #     param_y: ["Resonator_devices:0:norm_to_frequency", "Resonator_devices:1:norm_to_frequency"]
-    #     x: [[3, 3], [4, 4], [5, 5]]
-    #     y: [[6500, 7500], [7000, 8000], [7500, 8500], [8000, 9000]]
-    #     gap_x: 0
-    #     gap_y: 0
-    #   - param_x: ["Resonator_devices:0:feedline_gap", "Resonator_devices:1:feedline_gap"]
-    #     param_y: "dummy"
-    #     x: [[10, 10], [13, 13], [20, 20], [30, 30]]
-    #     y: [0, 0]
-    #     gap_x: 1
-    #     gap_y: 1
+    type: "gridsweep"
+    array:
+      - param_x: ["Resonator_devices:0:n_step", "Resonator_devices:1:n_step"]
+        param_y: ["Resonator_devices:0:norm_to_frequency", "Resonator_devices:1:norm_to_frequency"]
+        x: [[3, 3], [4, 4], [5, 5]]
+        y: [[6500, 7500], [7000, 8000], [7500, 8500], [8000, 9000]]
+        gap_x: 0
+        gap_y: 0
+      - param_x: ["Resonator_devices:0:feedline_gap", "Resonator_devices:1:feedline_gap"]
+        param_y: "dummy"
+        x: [[10, 10], [13, 13], [20, 20], [30, 30]]
+        y: [0, 0]
+        gap_x: 1
+        gap_y: 1
 
     ## More manual way to place chip designs
     ## Place arguments in the array, where you want samples
     ## Put "null" if you want an empty cell
-    type: "array"
-    devices:
-      - "Resonator_devices:0:feedline_gap": 104
-        "Resonator_devices:1:feedline_gap": 182
-      - "Resonator_devices:0:n_step": 4
-        "Resonator_devices:1:n_step": 5
-      - "Resonator_devices:0:norm_to_frequency": 9000
-        "Resonator_devices:1:norm_to_frequency": 8500
-      - "Resonator_devices:0:mirror": false
-        "Resonator_devices:1:mirror": true
-    array: [
-      [0    , null  , 1     , 3     , 1    , null  , 2     , 0    ],
-      [1    , null  , 3     , 0     , 0    , 1     , 2     , null ], 
-      [0    , 1     , 2     , null  , 1    , 3     , null  , 1    ],
-      [1    , 0     , null  , 1     , 1    , null  , 2     , 0    ], 
-      [0    , 1     , 2     , null  , 1    , 0     , 3     , 1    ],
-      [1    , null  , 3     , 0     , 3    , 1     , 2     , null ], 
-    ]
-    gap_x : 0
-    gap_y : 1
+    # type: "array"
+    # devices:
+    #   - "Resonator_devices:0:feedline_gap": 104
+    #     "Resonator_devices:1:feedline_gap": 182
+    #   - "Resonator_devices:0:n_step": 4
+    #     "Resonator_devices:1:n_step": 5
+    #   - "Resonator_devices:0:norm_to_frequency": 9000
+    #     "Resonator_devices:1:norm_to_frequency": 8500
+    #   - "Resonator_devices:0:mirror": false
+    #     "Resonator_devices:1:mirror": true
+    # array: [
+    #   [0    , null  , 1     , 3     , 1    , null  , 2     , 0    ],
+    #   [1    , null  , 3     , 0     , 0    , 1     , 2     , null ], 
+    #   [0    , 1     , 2     , null  , 1    , 3     , null  , 1    ],
+    #   [1    , 0     , null  , 1     , 1    , null  , 2     , 0    ], 
+    #   [0    , 1     , 2     , null  , 1    , 0     , 3     , 1    ],
+    #   [1    , null  , 3     , 0     , 3    , 1     , 2     , null ], 
+    # ]
+    # gap_x : 0
+    # gap_y : 1
