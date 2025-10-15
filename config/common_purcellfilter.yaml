@@ -1,6 +1,7 @@
 Wafer:
   layer: 21
   inch: 4
+  material: "silicon" # "sapphire"
 
 LaunchPad:
   layer: 4
@@ -55,11 +56,11 @@ FeedLine:
     radius: 90
     points:
       - [-2050, -2200]
-      - "PF[0]" # "PurcellFilter:0"
+      - "PF[0]" # "PurcellFilter"
       - [-1500, -2200]
       - [-1500, 0]
       - [2150, 0]  
-      - "PF[1]" # "PurcellFilter:1"
+      - "PF[1]" # "PurcellFilter"
       - [2150, 2050]
 
 Frame:
@@ -191,3 +192,13 @@ Grid:
         y: [false, true, false, true, false, true, false, true]
         gap_x: 1
         gap_y: 1
+
+# Variables defined here will be calculated after init_chipdesign during the gridsweep
+# Variables will be calculated from the top to bottom order
+# Return error when key is already defined
+Predefined:
+  FeedLine:
+    width  : "0.5 * LaunchPad_trace_width + LaunchPad_trace_gap_width"
+    offset : 0
+    ymax   : "FeedLine_offset + FeedLine_width"
+    ymin   : "FeedLine_offset - FeedLine_width"

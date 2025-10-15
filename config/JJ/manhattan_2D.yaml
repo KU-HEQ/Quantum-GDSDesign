@@ -1,9 +1,7 @@
 # Unit in [um]
 
 JJ:
-  type: "manhattan"
   squid: false
-  photolitho: false
   bandage: false
 
   # Connect two transmons

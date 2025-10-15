@@ -1,6 +1,7 @@
 Wafer:
   layer: 21
   inch: 4
+  material: "silicon" # "sapphire"
 
 LaunchPad:
   layer: 4

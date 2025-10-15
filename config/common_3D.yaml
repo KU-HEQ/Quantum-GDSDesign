@@ -1,0 +1,11 @@
+Wafer:
+  layer: 21
+  inch: 4
+  material: "silicon" # "sapphire"
+
+Frame:
+  layer: 25
+  width: 50
+  size:
+    height: 4800
+    width: 4800

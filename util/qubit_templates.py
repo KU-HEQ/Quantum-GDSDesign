@@ -422,7 +422,6 @@ class device_FeedLine_PurcellFilter(BaseDevice):
                 self.device.add_ref(D3)
                 self.pocket.add_ref(D4)
 
-
             self.add_ref(LP_out)
 
         else:
@@ -935,20 +934,17 @@ def device_JJ( config ):
 
         elif (config["JJ_type"] == "dl" or config["JJ_type"] == "dolan") and not config["JJ_bandage"]:
 
-            JJ_finger_up_width = finger_width
-            JJ_bridge_width = bridge_width
+            finger_up = pg.bbox([(-0.5*config["JJ_finger_up_width"], 0), (0.5*config["JJ_finger_up_width"], config["JJ_finger_up_length"])], config["JJ_finger_layer"])
+            finger_up.movey( 0.5*config["JJ_bridge_width"] )
+            finger_down = pg.bbox([(-0.5*config["JJ_finger_down_width"], -config["JJ_finger_down_length"]), (0.5*config["JJ_finger_down_width"], 0)], config["JJ_finger_layer"])
+            finger_down.movey( -0.5*config["JJ_bridge_width"] )
 
-            finger_up = pg.bbox([(-0.5*JJ_finger_up_width, 0), (0.5*JJ_finger_up_width, JJ_finger_up_length)], JJ_finger_layer)
-            finger_up.movey( 0.5*JJ_bridge_width )
-            finger_down = pg.bbox([(-0.5*JJ_finger_down_width, -JJ_finger_down_length), (0.5*JJ_finger_down_width, 0)], JJ_finger_layer)
-            finger_down.movey( -0.5*JJ_bridge_width )
-
-            pad_box = pg.bbox([(-0.5*JJ_pad_box_width, 0), (0.5*JJ_pad_box_width, JJ_pad_box_length)], JJ_finger_layer)
-            pad_box.movey(0.5*JJ_pad_box_gap)
+            pad_box = pg.bbox([(-0.5*config["JJ_pad_box_width"], 0), (0.5*config["JJ_pad_box_width"], config["JJ_pad_box_length"])], config["JJ_finger_layer"])
+            pad_box.movey(0.5*config["JJ_pad_box_gap"])
             
-            taper = pg.taper(length = JJ_taper_length, width1 = JJ_taper_width1, width2 = JJ_taper_width2, port = None, layer = JJ_finger_layer)
+            taper = pg.taper(length = config["JJ_taper_length"], width1 = config["JJ_taper_width1"], width2 = config["JJ_taper_width2"], port = None, layer = config["JJ_finger_layer"])
             taper.rotate(90)
-            taper.movey( 0.5*JJ_taper_gap )
+            taper.movey( 0.5*config["JJ_taper_gap"] )
 
             finger_up = JJ_half.add_ref( finger_up )
             finger_down = JJ_half.add_ref( finger_down )
@@ -1038,7 +1034,7 @@ def device_JJ( config ):
             finger_width_inner1 = 0.315
             finger_length_inner1 = 4.5
 
-            finger_width_inner2 = width
+            finger_width_inner2 = config["JJ_finger_width"]
             finger_length_inner2 = 4.2
 
             box_inner_width = 0.9
@@ -1159,10 +1155,10 @@ def device_JJ( config ):
                 finger_horizontal2.movex(-0.45*config["JJ_finger_length"])
 
         if (config["JJ_type"] == "dl" or config["JJ_type"] == "dolan") and config["JJ_bandage"]:
-            finger_width = finger_width_var
+            finger_width = config["JJ_finger_up_width"]
             finger_length = 1.5
 
-            bridge_width = bridge_width_var
+            bridge_width = config["JJ_bridge_width"]
             bridge_length = 2.0
 
             bridge_finger_overlay = 0.8
@@ -1230,20 +1226,17 @@ def device_JJ( config ):
 
         if (config["JJ_type"] == "dl" or config["JJ_type"] == "dolan") and not config["JJ_bandage"]:
 
-            JJ_finger_up_width = finger_width
-            JJ_bridge_width = bridge_width
+            finger_up = pg.bbox([(-0.5*config["JJ_finger_up_width"], 0), (0.5*config["JJ_finger_up_width"], config["JJ_finger_up_length"])], config["JJ_finger_layer"])
+            finger_up.movey( 0.5*config["JJ_bridge_width"] )
+            finger_down = pg.bbox([(-0.5*config["JJ_finger_down_width"], -config["JJ_finger_down_length"]), (0.5*config["JJ_finger_down_width"], 0)], config["JJ_finger_layer"])
+            finger_down.movey( -0.5*config["JJ_bridge_width"] )
 
-            finger_up = pg.bbox([(-0.5*JJ_finger_up_width, 0), (0.5*JJ_finger_up_width, JJ_finger_up_length)], JJ_finger_layer)
-            finger_up.movey( 0.5*JJ_bridge_width )
-            finger_down = pg.bbox([(-0.5*JJ_finger_down_width, -JJ_finger_down_length), (0.5*JJ_finger_down_width, 0)], JJ_finger_layer)
-            finger_down.movey( -0.5*JJ_bridge_width )
-
-            pad_box = pg.bbox([(-0.5*JJ_pad_box_width, 0), (0.5*JJ_pad_box_width, JJ_pad_box_length)], JJ_finger_layer)
-            pad_box.movey(0.5*JJ_pad_box_gap)
+            pad_box = pg.bbox([(-0.5*config["JJ_pad_box_width"], 0), (0.5*config["JJ_pad_box_width"], config["JJ_pad_box_length"])], config["JJ_finger_layer"])
+            pad_box.movey(0.5*config["JJ_pad_box_gap"])
             
-            taper = pg.taper(length = JJ_taper_length, width1 = JJ_taper_width1, width2 = JJ_taper_width2, port = None, layer = JJ_finger_layer)
+            taper = pg.taper(length = config["JJ_taper_length"], width1 = config["JJ_taper_width1"], width2 = config["JJ_taper_width2"], port = None, layer = config["JJ_finger_layer"])
             taper.rotate(90)
-            taper.movey( 0.5*JJ_taper_gap )
+            taper.movey( 0.5*config["JJ_taper_gap"] )
 
             finger_up = JJ_half.add_ref( finger_up )
             finger_down = JJ_half.add_ref( finger_down )

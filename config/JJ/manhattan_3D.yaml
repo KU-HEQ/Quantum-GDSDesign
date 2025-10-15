@@ -7,9 +7,7 @@ Pad:
   gap: 20 # gap between two capacitance pads
 
 JJ:
-  type: "manhattan"
   squid: false
-  photolitho: false
   bandage: false
 
   rounding: 0 # 0.05
@@ -30,7 +28,6 @@ JJ:
     length: 100
     gap: 10
 
-
 Pad_JJ:
   rounding: 0
 
@@ -42,9 +39,14 @@ DicingMarker:
 
 Frame:
   width: 20
+  ## silicon
   size:
     width: 2000
     height: 2000
+  ## sapphire
+  # size:
+  #   width: 3000
+  #   height: 8000  
 
 Grid:
   name: "transmon3D"

@@ -117,7 +117,7 @@ def sweep_chipdesign( config, userfunction = None ):
             )
             D.center = (0, 0)
         else:
-            raise ValueError("Incorrect Grid_sweep_type !!")
+            raise ValueError(f"Incorrect Grid_sweep_type : {config['Grid_sweep_type']}")
 
         return D
     
@@ -241,6 +241,11 @@ def chipdesign_transmon2D(config, chipdesign, devicelist):
         dict(device = R[2], name = "Qubit3"),    
         dict(device = R[3], name = "Qubit4")
     ] )
+    if config["JJ_entangle"]:
+        devicelist.extend([ 
+            dict(device = line[0], name = "Entangle1to2"),
+            dict(device = line[1], name = "Entangle3to4")
+        ])
 
     return chipdesign, devicelist
 
@@ -307,11 +312,12 @@ def chipdesign_transmon3D(config, chipdesign, devicelist):
 
     chipdesign = pg.union( chipdesign, layer = config["Pad_layer"] )
     for pol in chipdesign.polygons: # unions are separated in dolan structure, so loop through all polygons
-        pol.fillet( config["Pad_JJ_rounding"] )
+        if "Pad_JJ_rounding" in config:
+            pol.fillet( config["Pad_JJ_rounding"] )
     chipdesign = pg.union( chipdesign, layer = config["Pad_layer"] )
 
-    # text = eval(config["Text_string"], {"width": x, "height": y})
-    text = str(resolve_from_string(config["Text_string"], locals()))
+    # text = str(resolve_from_string(config["Text_string"], locals()))
+    text = str( eval(config["Text_string"]) )
     move_x = config["Text_pos_x"]*0.5*config["Frame_size_width"]
     move_y = config["Text_pos_y"]*0.5*config["Frame_size_height"]    
 
@@ -320,24 +326,26 @@ def chipdesign_transmon3D(config, chipdesign, devicelist):
     T.move([move_x,move_y])
     chipdesign.add_ref(T)
 
-    TA = Device('TestArea')
-    rectangle = pg.rectangle(( config["TestPoint_box_width"], config["TestPoint_box_length"]), config["TestPoint_layer"])
-    rectangle.polygons[0].fillet( config["TestPoint_box_rounding"] )
-    TA.add_ref( rectangle ).movex(0).movey(0.5*config["TestPoint_gap"])
-    TA.add_ref( rectangle ).mirror(p1 = (0, 0), p2 = (200, 0)).movex(0).movey(-0.5*config["TestPoint_gap"])
-    TA.center = (0, 0)  
-    TA_squid = pg.copy(TA)  
-    TA_squid.add_ref(JJ_squid)
-    TA_squid.movex(4*config["TestPoint_box_width"])
-    TA.add_ref(JJ)
-    TA.add_ref(TA_squid)
-    TA.center = (0,0)
-    
-    move_x = config["TestPoint_pos_x"]*0.5*config["Frame_size_width"]
-    move_y = config["TestPoint_pos_y"]*0.5*config["Frame_size_height"]   
-    TA.move([move_x, move_y])
-    TA = pg.union(TA, layer = config["TestPoint_layer"])     
-    chipdesign.add_ref(TA)
+    if check_config_key(config, "TestPoint"):
+
+        TA = Device('TestArea')
+        rectangle = pg.rectangle(( config["TestPoint_box_width"], config["TestPoint_box_length"]), config["TestPoint_layer"])
+        rectangle.polygons[0].fillet( config["TestPoint_box_rounding"] )
+        TA.add_ref( rectangle ).movex(0).movey(0.5*config["TestPoint_gap"])
+        TA.add_ref( rectangle ).mirror(p1 = (0, 0), p2 = (200, 0)).movex(0).movey(-0.5*config["TestPoint_gap"])
+        TA.center = (0, 0)  
+        TA_squid = pg.copy(TA)  
+        TA_squid.add_ref(JJ_squid)
+        TA_squid.movex(4*config["TestPoint_box_width"])
+        TA.add_ref(JJ)
+        TA.add_ref(TA_squid)
+        TA.center = (0,0)
+        
+        move_x = config["TestPoint_pos_x"]*0.5*config["Frame_size_width"]
+        move_y = config["TestPoint_pos_y"]*0.5*config["Frame_size_height"]   
+        TA.move([move_x, move_y])
+        TA = pg.union(TA, layer = config["TestPoint_layer"])     
+        chipdesign.add_ref(TA)
 
     return chipdesign, devicelist
 

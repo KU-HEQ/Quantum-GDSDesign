@@ -7,9 +7,11 @@ There are other packages such as [gdsfactory](https://gdsfactory.github.io/gdsfa
 - [Quantum GDS Design](#quantum-gds-design)
   - [Install](#install)
     - [Conda environment](#conda-environment)
+  - [Features](#features)
   - [How to make your own design?](#how-to-make-your-own-design)
     - [Templates](#templates)
     - [Configuration](#configuration)
+      - [Josephson Junctions](#josephson-junctions)
     - [Parameter Sweep](#parameter-sweep)
     - [Designs for qiskit-metal](#designs-for-qiskit-metal)
   - [Device details](#device-details)
@@ -18,7 +20,6 @@ There are other packages such as [gdsfactory](https://gdsfactory.github.io/gdsfa
 
 
 ## Install
----
 
 ### Conda environment
 
@@ -36,14 +37,19 @@ $ conda install pyyaml
 $ conda install scipy
 ```
 
-For Mac users, you can also use the environment.yml to setup the environment
+You can also use the environment.yml to setup the environment
 
 ```
 $ conda env create -f environment.yml
 ```
 
+## Features
+
+- Supports JJs (manhattan & dolan), entanglement, DC lines, purcell filters
+- Place chip designs in grids while sweeping any variable defined in yaml files
+- Produce gds and yaml files, which can be directly passed to qiskit-metal (designs compatible with qiskit-metal are summarized in [templates](#templates))
+
 ## How to make your own design?
----
 
 - Basics
   - Make a jupyter notebook and use predefined [templates](#templates) to make your own chip design.
@@ -56,19 +62,20 @@ $ conda env create -f environment.yml
 
 Functions to produce devices are summarized in ```util/qubit_templates.py```.
 
-|    Function name    |                   Description                   | qiskit-metal compatibility |
-| :------------------ | :---------------------------------------------- | :------------------------: |
-| device_Wafer        | Return wafer design                             |             x              |
-| device_Frame        | Return frames for chip design                   |             x              |
-| device_LaunchPad    | Return launch pad design                        |             o              |
-| device_Pad          | Return capacitance pads for 3D transmon         |             o              |
-| device_FeedLine     | Return feed line which connects two launch pads |             o              |
-| device_EntangleLine | Return lines to connect two transmons           |             o              |
-| device_DCLine       | Return design for DC line                       |             o              |
-| device_CornerPoints | Return boxes placed in the corners              |             x              |
-| device_TestAreas    | Return areas to place test JJs                  |             x              |
-| device_Resonator    | Return resonator design                         |             o              |
-| device_JJ           | Return josephson junction designs               |             x              |
+|    Function name     |                   Description                   | qiskit-metal compatibility |
+| :------------------- | :---------------------------------------------- | :------------------------: |
+| device_Wafer         | Return wafer design                             |             x              |
+| device_Frame         | Return frames for chip design                   |             x              |
+| device_LaunchPad     | Return launch pad design                        |             o              |
+| device_Pad           | Return capacitance pads for 3D transmon         |             o              |
+| device_FeedLine      | Return feed line which connects two launch pads |             o              |
+| device_EntangleLine  | Return lines to connect two transmons           |             o              |
+| device_DCLine        | Return design for DC line                       |             o              |
+| device_CornerPoints  | Return boxes placed in the corners              |             x              |
+| device_TestAreas     | Return areas to place test JJs                  |             x              |
+| device_Resonator     | Return resonator design                         |             o              |
+| device_JJ            | Return josephson junction designs               |             x              |
+| device_PurcellFilter | Return purcell filter design                    |             o              |
 
 ### Configuration
 
@@ -84,11 +91,11 @@ If you need to read multiple yaml files, you can concatenate multiple configurat
 
 ```python
 from functions import *
-config = load_config( ["config/common.yaml", f"config/silicon_2D_silicon.yaml"] ) # If these files include the same keys, the original value will be overwritten by config files on the right side
+config = load_config( ["config/common.yaml", "config/JJ/manhattan_2D.yaml"] ) # If these files include the same keys, the original value will be overwritten by config files on the right side
 
 # # What the function is doing
 # common_config = load_config( f"config/common.yaml" )
-# config = load_config( f"config/manhattan_2D_silicon.yaml" )
+# config = load_config( f"config/JJ/manhattan_2D.yaml" )
 # config = {**common_config, **config} 
 ```
 
@@ -139,6 +146,12 @@ Use the concatenated variable names when you need to run a parameter sweep.
 You may want to pass some objects defined by PHIDL, such as ```pp.arc``` when connecting two ports.
 The ```functions.py``` has a ```STRING_TO_OBJECT``` dictionary, which checks for specific strings and convert them to the corresponding objects.
 
+#### Josephson Junctions
+
+Configuration files for josephson junctions are arranged under the ```config/JJ``` directory.
+Depending on the setup (```dolan``` or ```manhattan```, photolitho only etc.), the josephson junction parameters are quite different, which results in different files.
+Currently, the variables below are set by the file names.
+If you need to adjust new variables depending on the file name, modify the ```set_JJtype``` function defined in ```util/functions.py```.
 
 ### Parameter Sweep
 

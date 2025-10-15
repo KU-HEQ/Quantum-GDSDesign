@@ -12,6 +12,18 @@ STRING_TO_OBJECT = {
     "pp.arc": pp.arc,
 }
 
+def check_config_key(config, string):
+
+    """
+    Check if keys in the config dictionary contains specific strings.
+    """
+    
+    for key in config.keys():
+        if string in key:
+            return True
+    
+    return False
+
 def replace_special_strings(obj):
 
     """辞書やリストを再帰的に探索し、特殊な文字列を対応するオブジェクトに変換"""
@@ -23,6 +35,33 @@ def replace_special_strings(obj):
         return STRING_TO_OBJECT[obj]
     else:
         return obj
+
+def set_JJtype(config, filename):
+    
+    filename = str(filename)
+    if not "JJ" in filename:
+        print(filename)
+        pass
+    else:
+        # print("""
+        # Some configuration values are set depending on the loaded file name.
+        # JJ_type : manhattan or dolan
+        # JJ_photolitho : True or False
+        # """)
+
+        if "photolitho" in filename:
+            config["JJ_photolitho"] = True
+        else:
+            config["JJ_photolitho"] = False
+
+        if "manhattan" in filename:
+            config["JJ_type"] = "manhattan"
+        elif "dolan" in filename:
+            config["JJ_type"] = "dolan"
+        else:
+            raise ValueError("Correct JJ type not specified!!")
+
+    return config
 
 # YAML 設定ファイルを読み込む関数
 def load_config(file_path):
@@ -39,8 +78,10 @@ def load_config(file_path):
     if type(file_path) == list: # For list type, config will be overwritten by value in the right 
         for file in file_path:
             config = {**config, **_load_config( file )}
+            config = set_JJtype(config, file)
     else:
         config = _load_config( file_path )
+        config = set_JJtype(config, file_path)
     
     return config
 
@@ -181,7 +222,26 @@ def phidl_port_to_metal_pin(port):
 
     return point1, point2
 
-def calculate_effective_permittivity(w, s, h, eps_r):
+def get_relative_permittivity(material):
+
+    if material == "silicon":
+        eps_r = 11.9
+        #eps_r = 11.45
+    elif material == "sapphire":
+        eps_r = 9.4
+    else:
+        raise ValueError(f"Unsupported material: {material}")
+    
+    return eps_r
+
+def calculate_effective_permittivity(core_width, gap_width, height, material):
+
+    w = core_width * 1e-6
+    s = gap_width * 1e-6
+    h = height * 1e-6
+
+    eps_r = get_relative_permittivity(material)
+
     k0 = w/(w + 2*s)
     k0_prime = math.sqrt(1-pow(k0, 2))
     k3 = math.tanh((math.pi*w)/(4*h))/math.tanh((math.pi*(w+2*s))/(4*h))
@@ -194,6 +254,13 @@ def calculate_effective_permittivity(w, s, h, eps_r):
     eps_eff = (1 + eps_r * K_tilde)/(1 + K_tilde)
     return eps_eff
 
+def calculate_effective_velocity(core_width, gap_width, height, material):
+    """有効伝搬速度を返す共通処理"""
+
+    eps_eff = calculate_effective_permittivity(core_width, gap_width, height, material)
+
+    return c / math.sqrt(eps_eff)
+
 def calculate_resonator_frequency(
         length = 3000, # um
         core_width = 10, # um
@@ -204,21 +271,7 @@ def calculate_resonator_frequency(
 
     # convert um to m
     l = length * 1e-6
-    w = core_width * 1e-6
-    s = gap_width * 1e-6
-    h = height * 1e-6
-
-    if material == "silicon":
-        eps_r = 11.9
-        #eps_r = 11.45
-    elif material == "sapphire":
-        eps_r = 9.4
-    else:
-        ValueError()
-
-    eps_eff = calculate_effective_permittivity(w, s, h, eps_r)
-    #eps_eff = 0.5*(1 + eps_r)
-    c_eff = c / math.sqrt(eps_eff)
+    c_eff = calculate_effective_velocity(core_width, gap_width, height, material)
     f = c_eff / (4*l)
 
     return f*1e-6
@@ -233,21 +286,41 @@ def calculate_resonator_length(
 
     # convert um to m & MHz to Hz
     f = frequency * 1e+6
-    w = core_width * 1e-6
-    s = gap_width * 1e-6
-    h = height * 1e-6
-
-    if material == "silicon":
-        eps_r = 11.9
-        #eps_r = 11.45
-    elif material == "sapphire":
-        eps_r = 9.4
-    else:
-        ValueError()
-
-    eps_eff = calculate_effective_permittivity(w, s, h, eps_r)
-    #eps_eff = 0.5*(1 + eps_r)
-    c_eff = c / math.sqrt(eps_eff)
+    c_eff = calculate_effective_velocity(core_width, gap_width, height, material)
     l = c_eff / (4*f)
 
     return l*1e+6
+
+def calculate_purcellfilter_frequency(
+        edge1,
+        edge2,
+        length = 3000, # um
+        core_width = 10, # um
+        gap_width = 6, # um
+        height = 525, # um
+        material = "silicon"
+        ):
+
+    # convert um to m
+    c_eff = calculate_effective_velocity(core_width, gap_width, height, material)
+
+    # effective length
+    # eps_eff = calculate_effective_permittivity(core_width, gap_width, height, material)
+    # edge1_cap = eps_eff * edge1["finger_length"] * edge1["finger_width"] / edge1["cap_gap"] * edge1["n_step"]
+    # eff_len_edge1 = edge1_cap * 50 / math.pi
+
+    # edge2_cap = eps_eff * edge2["finger_length"] * edge2["finger_width"] / edge2["cap_gap"] * edge2["n_step"]
+    # eff_len_edge2 = edge2_cap * 50 / math.pi
+
+    eff_len_edge1 = (edge1["finger_length"] + edge1["finger_width"]) * edge1["n_step"]
+    eff_len_edge2 = (edge2["finger_length"] + edge2["finger_width"]) * edge2["n_step"]
+
+    print("eff_len_edge1", eff_len_edge1)
+    print("eff_len_edge2", eff_len_edge2)
+
+    length = length + eff_len_edge1 + eff_len_edge2
+
+    l = length * 1e-6
+    f = c_eff / (2*l)
+
+    return f*1e-6
