@@ -1,0 +1,61 @@
+FeedLine:
+  layer: 0
+  ports:
+    LaunchPad0:
+      start:
+      - -1950.0
+      - -940.0
+      end:
+      - -2150.0
+      - -940.0
+      width: 200.0
+      gap: 100.0
+    LaunchPad1:
+      start:
+      - 920.0
+      - 2150.0
+      end:
+      - 920.0
+      - 1950.0
+      width: 200.0
+      gap: 100.0
+Qubit1:
+  layer: 1
+  jj:
+    start:
+    - 1020.0
+    - -1621.0
+    end:
+    - 1020.0
+    - -1605.0
+    width: 10.0
+Qubit2:
+  layer: 2
+  jj:
+    start:
+    - -170.0
+    - -1621.0
+    end:
+    - -170.0
+    - -1605.0
+    width: 10.0
+Qubit3:
+  layer: 3
+  jj:
+    start:
+    - -1185.0
+    - 1251.0
+    end:
+    - -1185.0
+    - 1235.0
+    width: 10.0
+Qubit4:
+  layer: 4
+  jj:
+    start:
+    - 49.999999999999986
+    - 1251.0
+    end:
+    - 49.99999999999999
+    - 1235.0
+    width: 10.0

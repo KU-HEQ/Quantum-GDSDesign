@@ -17,32 +17,58 @@ LaunchPad:
     gap:
       width: 11
 
+PurcellFilter:
+  layer: 4
+  devices:
+    - pos: [-1800, -2200]
+      angle: 0
+      pad_gap: 22
+      trace_length: 100
+      n_step: 3
+      finger_width: 11
+      finger_length: 100
+      cap_gap: 4
+    - pos: [2150, 1550]
+      angle: 90
+      pad_gap: 56
+      trace_length: 100
+      n_step: 7
+      finger_width: 11
+      finger_length: 500
+      cap_gap: 4
+
 FeedLine:
   input:
     type: "LaunchPad"
-    pos: [450, 2025] # [750, 2025]
-    angle: 0
+    pos: [-2050, -1540]
+    angle: 90
   output:
     type: "LaunchPad"
-    pos: [1950, 500] # [1950, 800]
-    angle: 90
+    pos: [1520, 2050] 
+    angle: 180
 
   ## If you just want to connect the input and output port,
   ## this is the easiest way.
   ## options are listed in https://phidl.readthedocs.io/en/latest/tutorials/routing.html#List-of-routing-path-types
 
   path:
-    type: "J"
-    length1: 790
-    length2: 768
-    radius: 100
+    type: "manual"
+    radius: 90
+    points:
+      - [-2050, -2200]
+      - "PF[0]" # "PurcellFilter"
+      - [-1500, -2200]
+      - [-1500, 0]
+      - [2150, 0]  
+      - "PF[1]" # "PurcellFilter"
+      - [2150, 2050]
 
 Frame:
   layer: 25
   width: 50
   size:
-    height: 4800
-    width: 4800
+    height: 5000
+    width: 5000
 
 DCLine: 
   activate: true # Add DC line next to squids
@@ -75,32 +101,34 @@ Resonator:
       resonator_straight4: 1400
       feedline_gap: 13
       movex: 1315
-      ymax: "FL.ymin"
+      mirror: true
+      ymax: -21
     - resonator_straight1: 240
       resonator_straight2: 290
       resonator_straight3: 475
       resonator_straight4: 1400
       feedline_gap: 13
       movex: 145
-      ymax: "FL.ymin"
+      mirror: true
+      ymax: -21
     - resonator_straight1: 310
       resonator_straight2: 360
       resonator_straight3: 475
       resonator_straight4: 1030
       feedline_gap: 13
-      side: true
-      mirror: true
-      movey: 408
-      xmax: "FL.xmin"
+      flip: true
+      mirror: false
+      movex: -800
+      ymin: 21
     - resonator_straight1: 275
       resonator_straight2: 325
       resonator_straight3: 475
       resonator_straight4: 1030
       feedline_gap: 13
-      side: true
+      flip: true
       mirror: false
-      movey: 1383
-      xmax: "FL.xmin"
+      movex: 400
+      ymin: 21
 
 TestPoint:
   layer: 4
@@ -141,15 +169,15 @@ EBMarker:
   layer: 3
   pos: 
     - [     0,      0]
-    - [     0,  38400]
-    - [-19200, -28800]
-    - [ 38400,      0]
-    - [     0, -38400]
-    - [-19200, -38400]
-    - [-38400,      0]
+    - [     0,  40000]
+    - [-20000, -30000]
+    - [ 40000,      0]
+    - [     0, -40000]
+    - [-20000, -40000]
+    - [-40000,      0]
 
 Grid:
-  name: "transmon2D"
+  name: "transmon2D_Purcell"
   layer: 9
   lines:
     x: 20
@@ -164,3 +192,13 @@ Grid:
         y: [false, true, false, true, false, true, false, true]
         gap_x: 1
         gap_y: 1
+
+# Variables defined here will be calculated after init_chipdesign during the gridsweep
+# Variables will be calculated from the top to bottom order
+# Return error when key is already defined
+Predefined:
+  FeedLine:
+    width  : "0.5 * LaunchPad_trace_width + LaunchPad_trace_gap_width"
+    offset : 0
+    ymax   : "FeedLine_offset + FeedLine_width"
+    ymin   : "FeedLine_offset - FeedLine_width"

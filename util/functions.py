@@ -1,22 +1,89 @@
-import yaml
+import yaml, pprint, math
 from scipy.special import ellipk
 from scipy.constants import *
-import math
 import numpy as np
 
 from phidl import quickplot as qp
 from phidl import Device
 import phidl.geometry as pg
+import phidl.path as pp
+
+STRING_TO_OBJECT = {
+    "pp.arc": pp.arc,
+}
+
+def check_config_key(config, string):
+
+    """
+    Check if keys in the config dictionary contains specific strings.
+    """
+    
+    for key in config.keys():
+        if string in key:
+            return True
+    
+    return False
+
+def replace_special_strings(obj):
+
+    """辞書やリストを再帰的に探索し、特殊な文字列を対応するオブジェクトに変換"""
+    if isinstance(obj, dict):
+        return {k: replace_special_strings(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [replace_special_strings(v) for v in obj]
+    elif isinstance(obj, str) and obj in STRING_TO_OBJECT:
+        return STRING_TO_OBJECT[obj]
+    else:
+        return obj
+
+def set_JJtype(config, filename):
+    
+    filename = str(filename)
+    if not "JJ" in filename:
+        print(filename)
+        pass
+    else:
+        # print("""
+        # Some configuration values are set depending on the loaded file name.
+        # JJ_type : manhattan or dolan
+        # JJ_photolitho : True or False
+        # """)
+
+        if "photolitho" in filename:
+            config["JJ_photolitho"] = True
+        else:
+            config["JJ_photolitho"] = False
+
+        if "manhattan" in filename:
+            config["JJ_type"] = "manhattan"
+        elif "dolan" in filename:
+            config["JJ_type"] = "dolan"
+        else:
+            raise ValueError("Correct JJ type not specified!!")
+
+    return config
 
 # YAML 設定ファイルを読み込む関数
 def load_config(file_path):
-    with open(file_path, 'r') as file:
-        config = yaml.safe_load(file)
 
-    flat_data = flatten_dict(config)
-    global_data = {f"{k}": v for k, v in flat_data.items()}
-
-    return global_data
+    def _load_config( _file_name ):
+        with open(_file_name, 'r') as _file:
+            _config = yaml.safe_load(_file)
+        _flat_data = flatten_dict(_config)
+        _global_data = {f"{k}": v for k, v in _flat_data.items()}
+        _global_data = replace_special_strings(_global_data)
+        return _global_data
+    
+    config = {}
+    if type(file_path) == list: # For list type, config will be overwritten by value in the right 
+        for file in file_path:
+            config = {**config, **_load_config( file )}
+            config = set_JJtype(config, file)
+    else:
+        config = _load_config( file_path )
+        config = set_JJtype(config, file_path)
+    
+    return config
 
 # 再帰的にフラットな変数名で辞書を展開
 def flatten_dict(d, parent_key="", sep="_"):
@@ -28,6 +95,25 @@ def flatten_dict(d, parent_key="", sep="_"):
         else:
             items[new_key] = v
     return items
+
+# def flatten_dict(d, parent_key="", sep="_"):
+#     items = []
+#     for k, v in d.items():
+#         new_key = f"{parent_key}{sep}{k}" if parent_key else k
+#         if isinstance(v, dict):
+#             items.extend(flatten_dict(v, new_key, sep=sep).items())
+#         elif isinstance(v, list):
+#             # list の中身が dict なら flatten
+#             new_list = []
+#             for elem in v:
+#                 if isinstance(elem, dict):
+#                     new_list.append(flatten_dict(elem, sep=sep))
+#                 else:
+#                     new_list.append(elem)
+#             items.append((new_key, new_list))
+#         else:
+#             items.append((new_key, v))
+#     return dict(items)
 
 def phidl_to_metal(device_list, outname):
 
@@ -83,13 +169,19 @@ def phidl_to_metal(device_list, outname):
         if jj_data:
             data[key]["jj"] = jj_data            
 
-    print(data)
+    pprint.pprint(data)
     with open(f'output/qiskit-metal/{outname}.yaml', 'w') as f:
         yaml.safe_dump(data, f, sort_keys=False)
 
+def rename_port(device, before, after):
+
+    device.ports[after] = device.ports[before]
+    device.ports[after].name = after
+    del device.ports[before]
+
 def extract_with_ports(device, layers_to_extract):
 
-    print(device.get_ports())
+    # print(device.get_ports())
     extracted = pg.extract(device, layers_to_extract)
     
     for port in device.get_ports():
@@ -130,7 +222,26 @@ def phidl_port_to_metal_pin(port):
 
     return point1, point2
 
-def calculate_effective_permittivity(w, s, h, eps_r):
+def get_relative_permittivity(material):
+
+    if material == "silicon":
+        eps_r = 11.9
+        #eps_r = 11.45
+    elif material == "sapphire":
+        eps_r = 9.4
+    else:
+        raise ValueError(f"Unsupported material: {material}")
+    
+    return eps_r
+
+def calculate_effective_permittivity(core_width, gap_width, height, material):
+
+    w = core_width * 1e-6
+    s = gap_width * 1e-6
+    h = height * 1e-6
+
+    eps_r = get_relative_permittivity(material)
+
     k0 = w/(w + 2*s)
     k0_prime = math.sqrt(1-pow(k0, 2))
     k3 = math.tanh((math.pi*w)/(4*h))/math.tanh((math.pi*(w+2*s))/(4*h))
@@ -143,6 +254,13 @@ def calculate_effective_permittivity(w, s, h, eps_r):
     eps_eff = (1 + eps_r * K_tilde)/(1 + K_tilde)
     return eps_eff
 
+def calculate_effective_velocity(core_width, gap_width, height, material):
+    """有効伝搬速度を返す共通処理"""
+
+    eps_eff = calculate_effective_permittivity(core_width, gap_width, height, material)
+
+    return c / math.sqrt(eps_eff)
+
 def calculate_resonator_frequency(
         length = 3000, # um
         core_width = 10, # um
@@ -153,21 +271,7 @@ def calculate_resonator_frequency(
 
     # convert um to m
     l = length * 1e-6
-    w = core_width * 1e-6
-    s = gap_width * 1e-6
-    h = height * 1e-6
-
-    if material == "silicon":
-        eps_r = 11.9
-        #eps_r = 11.45
-    elif material == "sapphire":
-        eps_r = 9.4
-    else:
-        ValueError()
-
-    eps_eff = calculate_effective_permittivity(w, s, h, eps_r)
-    #eps_eff = 0.5*(1 + eps_r)
-    c_eff = c / math.sqrt(eps_eff)
+    c_eff = calculate_effective_velocity(core_width, gap_width, height, material)
     f = c_eff / (4*l)
 
     return f*1e-6
@@ -182,21 +286,41 @@ def calculate_resonator_length(
 
     # convert um to m & MHz to Hz
     f = frequency * 1e+6
-    w = core_width * 1e-6
-    s = gap_width * 1e-6
-    h = height * 1e-6
-
-    if material == "silicon":
-        eps_r = 11.9
-        #eps_r = 11.45
-    elif material == "sapphire":
-        eps_r = 9.4
-    else:
-        ValueError()
-
-    eps_eff = calculate_effective_permittivity(w, s, h, eps_r)
-    #eps_eff = 0.5*(1 + eps_r)
-    c_eff = c / math.sqrt(eps_eff)
+    c_eff = calculate_effective_velocity(core_width, gap_width, height, material)
     l = c_eff / (4*f)
 
     return l*1e+6
+
+def calculate_purcellfilter_frequency(
+        edge1,
+        edge2,
+        length = 3000, # um
+        core_width = 10, # um
+        gap_width = 6, # um
+        height = 525, # um
+        material = "silicon"
+        ):
+
+    # convert um to m
+    c_eff = calculate_effective_velocity(core_width, gap_width, height, material)
+
+    # effective length
+    # eps_eff = calculate_effective_permittivity(core_width, gap_width, height, material)
+    # edge1_cap = eps_eff * edge1["finger_length"] * edge1["finger_width"] / edge1["cap_gap"] * edge1["n_step"]
+    # eff_len_edge1 = edge1_cap * 50 / math.pi
+
+    # edge2_cap = eps_eff * edge2["finger_length"] * edge2["finger_width"] / edge2["cap_gap"] * edge2["n_step"]
+    # eff_len_edge2 = edge2_cap * 50 / math.pi
+
+    eff_len_edge1 = (edge1["finger_length"] + edge1["finger_width"]) * edge1["n_step"]
+    eff_len_edge2 = (edge2["finger_length"] + edge2["finger_width"]) * edge2["n_step"]
+
+    print("eff_len_edge1", eff_len_edge1)
+    print("eff_len_edge2", eff_len_edge2)
+
+    length = length + eff_len_edge1 + eff_len_edge2
+
+    l = length * 1e-6
+    f = c_eff / (2*l)
+
+    return f*1e-6

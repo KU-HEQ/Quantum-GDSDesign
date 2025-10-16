@@ -1,5 +1,7 @@
 Wafer:
   layer: 21
+  inch: 4
+  material: "silicon" # "sapphire"
 
 LaunchPad:
   layer: 4
@@ -59,16 +61,13 @@ FeedLine:
   #     - ["straight", 400]
   #     - ["right", 100]
   #     - ["straight", 400]    
-    
-Feedline_Resonator:
-  gap: 13 
 
 Frame:
   layer: 25
-  width: 100
+  width: 50
   size:
-    height: 4650
-    width: 2250
+    height: 4750
+    width: 2350
 
 DCLine:
   radius: 100
@@ -93,7 +92,38 @@ Resonator:
     length: 700
   gap:
     width: 6
-    
+  devices:
+    - resonator_straight1: 220
+      resonator_straight2: 260
+      resonator_straight3: 475
+      resonator_straight4: 700
+      n_step: 3
+      transmon: false
+      mirror: true
+      print_length: false
+      # norm_to_length: 3250
+      norm_to_frequency: 7000
+      angle: 90
+      feedline_gap: 13
+      y: 500
+      # If FeedLine_path_type is 'manual' you need to specify which path point you want to use to calculate x
+      # x_pathpoint: 0
+      # y: 600
+    - resonator_straight1: 220
+      resonator_straight2: 260
+      resonator_straight3: 475
+      resonator_straight4: 1100
+      n_step: 3
+      transmon: false
+      mirror: false
+      print_length: false
+      # norm_to_length: 3700
+      norm_to_frequency: 7500
+      angle: 90
+      feedline_gap: 13
+      y: -500
+      # x_pathpoint: 3
+      # y: -600
 
 TestPoint:
   layer: 4
@@ -138,28 +168,49 @@ EBMarker:
 
 
 Grid:
+  name: "TcSample"
   layer: 9
   lines:
-    x: 12
+    x: 16
     y: 10
   sweep:
-
     ## If you have many parameters to sweep, use gridsweep to make a 2D array
     ## The example below has different resonator length for each row
-    # type: "gridsweep"
-    # dummy: [0, 0, 0, 0]
-    # frequency: [[6500, 7500], [7000, 8000], [7500, 8500], [8000, 9000]]
-    
+    type: "gridsweep"
+    array:
+      - param_x: ["Resonator_devices:0:n_step", "Resonator_devices:1:n_step"]
+        param_y: ["Resonator_devices:0:norm_to_frequency", "Resonator_devices:1:norm_to_frequency"]
+        x: [[3, 3], [4, 4], [5, 5]]
+        y: [[6500, 7500], [7000, 8000], [7500, 8500], [8000, 9000]]
+        gap_x: 0
+        gap_y: 0
+      - param_x: ["Resonator_devices:0:feedline_gap", "Resonator_devices:1:feedline_gap"]
+        param_y: "dummy"
+        x: [[10, 10], [13, 13], [20, 20], [30, 30]]
+        y: [0, 0]
+        gap_x: 1
+        gap_y: 1
+
     ## More manual way to place chip designs
     ## Place arguments in the array, where you want samples
     ## Put "null" if you want an empty cell
-    type: "array"
-    array: [
-      [[6500, 7500], null        , [6500, 7500], null        ],
-      [[7000, 8000], null        , [7000, 8000], null        ], 
-      [null        , [7500, 8500], null        , [7500, 8500]],
-      [null        , [8000, 9000], null        , [8000, 9000]],
-    ]
-  gap:
-    x: 1
-    y: 1
+    # type: "array"
+    # devices:
+    #   - "Resonator_devices:0:feedline_gap": 104
+    #     "Resonator_devices:1:feedline_gap": 182
+    #   - "Resonator_devices:0:n_step": 4
+    #     "Resonator_devices:1:n_step": 5
+    #   - "Resonator_devices:0:norm_to_frequency": 9000
+    #     "Resonator_devices:1:norm_to_frequency": 8500
+    #   - "Resonator_devices:0:mirror": false
+    #     "Resonator_devices:1:mirror": true
+    # array: [
+    #   [0    , null  , 1     , 3     , 1    , null  , 2     , 0    ],
+    #   [1    , null  , 3     , 0     , 0    , 1     , 2     , null ], 
+    #   [0    , 1     , 2     , null  , 1    , 3     , null  , 1    ],
+    #   [1    , 0     , null  , 1     , 1    , null  , 2     , 0    ], 
+    #   [0    , 1     , 2     , null  , 1    , 0     , 3     , 1    ],
+    #   [1    , null  , 3     , 0     , 3    , 1     , 2     , null ], 
+    # ]
+    # gap_x : 0
+    # gap_y : 1
